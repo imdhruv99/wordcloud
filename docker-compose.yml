@@ -3,15 +3,16 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: wordcloud
-      POSTGRES_PASSWORD: wordcloud
-      POSTGRES_DB: wordcloud
+      POSTGRES_USER: ${POSTGRES_USER:-wordcloud}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wordcloud}
+      POSTGRES_DB: ${POSTGRES_DB:-wordcloud}
+    # Bind to localhost only so the database is never exposed to the internet.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wordcloud -d wordcloud"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wordcloud} -d ${POSTGRES_DB:-wordcloud}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -20,7 +21,7 @@ services:
     build: ./server
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://wordcloud:wordcloud@db:5432/wordcloud
+      DATABASE_URL: postgres://${POSTGRES_USER:-wordcloud}:${POSTGRES_PASSWORD:-wordcloud}@db:5432/${POSTGRES_DB:-wordcloud}
       PORT: 3000
     depends_on:
       db:
@@ -30,7 +31,7 @@ services:
     build: ./client
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       - server
 
