@@ -21,8 +21,13 @@ services:
     build: ./server
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-wordcloud}:${POSTGRES_PASSWORD:-wordcloud}@db:5432/${POSTGRES_DB:-wordcloud}
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-wordcloud}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-wordcloud}
+      PGDATABASE: ${POSTGRES_DB:-wordcloud}
       PORT: 3000
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

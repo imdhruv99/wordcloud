@@ -27,14 +27,27 @@ wordcloud/
 
 ## API
 
-| Method | Path         | Description                                   |
-| ------ | ------------ | --------------------------------------------- |
-| `GET`  | `/api/words` | Returns all counts: `{ "hello": 3, ... }`     |
-| `POST` | `/api/words` | Body `{ "word": "hello" }`; increments count  |
-| `GET`  | `/health`    | Liveness check: `{ "ok": true }`              |
+| Method   | Path         | Description                                           |
+| -------- | ------------ | ----------------------------------------------------- |
+| `GET`    | `/api/words` | Returns all counts: `{ "hello": 3, ... }`             |
+| `POST`   | `/api/words` | Body `{ "word": "hello" }`; increments count          |
+| `DELETE` | `/api/words` | Admin-only: clears all words (requires `ADMIN_TOKEN`) |
+| `GET`    | `/health`    | Liveness check: `{ "ok": true }`                      |
 
 Words are normalized server-side: trimmed, lowercased, max 30 chars, single
 word only (no spaces).
+
+### Clearing all words (admin)
+
+`DELETE /api/words` is not used by the frontend — hit it manually. It is
+disabled unless `ADMIN_TOKEN` is set, and every request must send a matching
+`x-admin-token` header:
+
+```bash
+curl -X DELETE -H "x-admin-token: $ADMIN_TOKEN" http://<host>/api/words
+```
+
+The cloud empties for everyone within a few seconds.
 
 ## Run everything with Docker (recommended)
 
@@ -79,16 +92,18 @@ Open the URL Vite prints (usually <http://localhost:5173>).
 
 Compose reads these from `.env` (see [.env.example](.env.example)):
 
-| Variable            | Default     | Purpose                                  |
-| ------------------- | ----------- | ---------------------------------------- |
-| `WEB_PORT`          | `8080`      | Public port the site is served on        |
-| `POSTGRES_USER`     | `wordcloud` | Database user                            |
-| `POSTGRES_PASSWORD` | `wordcloud` | Database password (change in production) |
-| `POSTGRES_DB`       | `wordcloud` | Database name                            |
+| Variable            | Default     | Purpose                                      |
+| ------------------- | ----------- | -------------------------------------------- |
+| `WEB_PORT`          | `8080`      | Public port the site is served on            |
+| `POSTGRES_USER`     | `wordcloud` | Database user                                |
+| `POSTGRES_PASSWORD` | `wordcloud` | Database password (change in production)     |
+| `POSTGRES_DB`       | `wordcloud` | Database name                                |
+| `ADMIN_TOKEN`       | _(empty)_   | Secret for `DELETE /api/words`; empty = off  |
 
-The backend connects to Postgres via `DATABASE_URL`, which Compose builds from
-the variables above. Postgres is bound to `127.0.0.1:5432` so it is never
-exposed to the public network.
+The backend connects to Postgres using discrete `PGHOST`/`PGUSER`/`PGPASSWORD`/
+`PGDATABASE` variables (set by Compose from the values above), so passwords with
+special characters like `@ # $` work as-is — no URL-encoding needed. Postgres is
+bound to `127.0.0.1:5432` so it is never exposed to the public network.
 
 ## Deploy on a VM
 

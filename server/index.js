@@ -2,7 +2,12 @@ import express from 'express'
 import pg from 'pg'
 
 const { Pool } = pg
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+// Use discrete PG* env vars (PGHOST/PGUSER/PGPASSWORD/...) so passwords with
+// special characters like @ # $ work without URL-encoding. DATABASE_URL still
+// works for local dev if it is set.
+const pool = process.env.DATABASE_URL
+    ? new Pool({ connectionString: process.env.DATABASE_URL })
+    : new Pool()
 
 const PORT = Number(process.env.PORT ?? 3000)
 
@@ -48,6 +53,17 @@ app.post('/api/words', async (req, res) => {
         [word],
     )
     res.json(await counts())
+})
+
+// Admin-only: wipe all words. Not called by the frontend; hit it manually, e.g.
+//   curl -X DELETE -H "x-admin-token: <token>" http://host/api/words
+// If ADMIN_TOKEN is unset, the endpoint is disabled.
+app.delete('/api/words', async (req, res) => {
+    const token = process.env.ADMIN_TOKEN
+    if (!token) return res.status(403).json({ error: 'admin endpoint disabled' })
+    if (req.get('x-admin-token') !== token) return res.status(401).json({ error: 'unauthorized' })
+    await pool.query('TRUNCATE words')
+    res.json({ ok: true })
 })
 
 initDb()
