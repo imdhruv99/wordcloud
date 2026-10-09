@@ -1,5 +1,5 @@
 import './style.css'
-import { subscribe, subscribeSettings, getSettings } from './store'
+import { subscribe, subscribeSettings, getSettings, startSync } from './store'
 import { createCloudCanvas } from './components/CloudCanvas'
 import { createControlBar } from './components/ControlBar'
 
@@ -26,3 +26,4 @@ window.addEventListener('resize', () => {
 
 applyTheme()
 cloud.draw()
+startSync()

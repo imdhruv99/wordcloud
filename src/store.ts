@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'wordcloud:words'
 const SETTINGS_KEY = 'wordcloud:settings'
+const SYNC_INTERVAL = 3000
 
 type Listener = (counts: Map<string, number>) => void
 
@@ -19,18 +19,8 @@ const DEFAULT_SETTINGS: Settings = {
 
 const listeners = new Set<Listener>()
 const settingsListeners = new Set<(s: Settings) => void>()
-let counts = load()
+let counts = new Map<string, number>()
 let settings = loadSettings()
-
-function load(): Map<string, number> {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (!raw) return new Map()
-        return new Map(Object.entries(JSON.parse(raw) as Record<string, number>))
-    } catch {
-        return new Map()
-    }
-}
 
 function loadSettings(): Settings {
     try {
@@ -40,10 +30,6 @@ function loadSettings(): Settings {
     } catch {
         return { ...DEFAULT_SETTINGS }
     }
-}
-
-function persist(): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(counts)))
 }
 
 function persistSettings(): void {
@@ -66,23 +52,52 @@ export function normalize(input: string): string | null {
     return word
 }
 
-export function addWord(input: string): boolean {
+function toMap(obj: Record<string, number>): Map<string, number> {
+    return new Map(Object.entries(obj))
+}
+
+/** Pull the latest shared counts from the server. */
+export async function refresh(): Promise<void> {
+    try {
+        const res = await fetch('/api/words')
+        if (!res.ok) return
+        counts = toMap(await res.json())
+        emit()
+    } catch {
+        // Offline or server error: keep whatever we already have.
+    }
+}
+
+/** Start periodic syncing so words from other users appear automatically. */
+export function startSync(): void {
+    void refresh()
+    setInterval(() => void refresh(), SYNC_INTERVAL)
+}
+
+export async function addWord(input: string): Promise<boolean> {
     const word = normalize(input)
     if (!word) return false
+    // Optimistic update so the submitter sees it instantly.
     counts.set(word, (counts.get(word) ?? 0) + 1)
-    persist()
     emit()
+    try {
+        const res = await fetch('/api/words', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ word }),
+        })
+        if (res.ok) {
+            counts = toMap(await res.json())
+            emit()
+        }
+    } catch {
+        // Keep the optimistic value; next refresh will reconcile.
+    }
     return true
 }
 
 export function getCounts(): Map<string, number> {
     return counts
-}
-
-export function clearWords(): void {
-    counts = new Map()
-    persist()
-    emit()
 }
 
 export function subscribe(listener: Listener): void {
@@ -102,11 +117,3 @@ export function updateSettings(patch: Partial<Settings>): void {
 export function subscribeSettings(listener: (s: Settings) => void): void {
     settingsListeners.add(listener)
 }
-
-// Keep multiple tabs/windows of the same browser in sync.
-window.addEventListener('storage', (e) => {
-    if (e.key === STORAGE_KEY) {
-        counts = load()
-        emit()
-    }
-})

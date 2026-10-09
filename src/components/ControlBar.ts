@@ -2,17 +2,17 @@ import { addWord, getSettings, updateSettings, subscribeSettings } from '../stor
 import { PALETTES, FONTS, type Option } from '../constants'
 
 function optionsHtml(list: Option[], selected: string): string {
-    return list
-        .map((o) => `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`)
-        .join('')
+  return list
+    .map((o) => `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`)
+    .join('')
 }
 
 export function createControlBar(): HTMLElement {
-    const s = getSettings()
+  const s = getSettings()
 
-    const bar = document.createElement('div')
-    bar.className = 'controls'
-    bar.innerHTML = `
+  const bar = document.createElement('div')
+  bar.className = 'controls'
+  bar.innerHTML = `
     <label class="field">
       <span>Palette</span>
       <select id="palette">${optionsHtml(PALETTES, s.palette)}</select>
@@ -36,31 +36,31 @@ export function createControlBar(): HTMLElement {
     </form>
   `
 
-    const form = bar.querySelector<HTMLFormElement>('#form')!
-    const input = bar.querySelector<HTMLInputElement>('#input')!
-    const paletteSel = bar.querySelector<HTMLSelectElement>('#palette')!
-    const fontSel = bar.querySelector<HTMLSelectElement>('#font')!
-    const capitalizeChk = bar.querySelector<HTMLInputElement>('#capitalize')!
-    const themeBtn = bar.querySelector<HTMLButtonElement>('#theme')!
+  const form = bar.querySelector<HTMLFormElement>('#form')!
+  const input = bar.querySelector<HTMLInputElement>('#input')!
+  const paletteSel = bar.querySelector<HTMLSelectElement>('#palette')!
+  const fontSel = bar.querySelector<HTMLSelectElement>('#font')!
+  const capitalizeChk = bar.querySelector<HTMLInputElement>('#capitalize')!
+  const themeBtn = bar.querySelector<HTMLButtonElement>('#theme')!
 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault()
-        if (addWord(input.value)) {
-            input.value = ''
-            input.focus()
-        }
-    })
+  form.addEventListener('submit', (e) => {
+    e.preventDefault()
+    const value = input.value
+    input.value = ''
+    input.focus()
+    void addWord(value)
+  })
 
-    paletteSel.addEventListener('change', () => updateSettings({ palette: paletteSel.value }))
-    fontSel.addEventListener('change', () => updateSettings({ font: fontSel.value }))
-    capitalizeChk.addEventListener('change', () => updateSettings({ capitalize: capitalizeChk.checked }))
-    themeBtn.addEventListener('click', () =>
-        updateSettings({ theme: getSettings().theme === 'dark' ? 'light' : 'dark' }),
-    )
+  paletteSel.addEventListener('change', () => updateSettings({ palette: paletteSel.value }))
+  fontSel.addEventListener('change', () => updateSettings({ font: fontSel.value }))
+  capitalizeChk.addEventListener('change', () => updateSettings({ capitalize: capitalizeChk.checked }))
+  themeBtn.addEventListener('click', () =>
+    updateSettings({ theme: getSettings().theme === 'dark' ? 'light' : 'dark' }),
+  )
 
-    subscribeSettings((settings) => {
-        themeBtn.textContent = settings.theme === 'dark' ? '☀️' : '🌙'
-    })
+  subscribeSettings((settings) => {
+    themeBtn.textContent = settings.theme === 'dark' ? '☀️' : '🌙'
+  })
 
-    return bar
+  return bar
 }
