@@ -16,7 +16,7 @@ export function createCloudCanvas(): CloudCanvas {
 
     const empty = document.createElement('p')
     empty.className = 'empty'
-    empty.textContent = 'What\'s in your mind ? '
+    empty.textContent = 'What\'s on your mind ? '
 
     wrap.append(stage, empty)
 
