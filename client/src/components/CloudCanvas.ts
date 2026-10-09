@@ -20,17 +20,26 @@ export function createCloudCanvas(): CloudCanvas {
 
     wrap.append(stage, empty)
 
-    // Reveal words one after another once the library has placed every word.
+    // Words present at the previous render, so we only animate genuinely new ones.
+    let prev = new Map<string, number>()
+    let newWords = new Set<string>()
+    let firstRender = true
+
+    // Fade in only the words that were just added; leave existing words untouched.
     stage.addEventListener('wordcloudstop', () => {
-        const spans = stage.querySelectorAll<HTMLSpanElement>('span')
+        const spans = [...stage.querySelectorAll<HTMLSpanElement>('span')]
+        const targets = firstRender
+            ? spans
+            : spans.filter((s) => newWords.has((s.textContent ?? '').trim().toLowerCase()))
+        if (!targets.length) return
         gsap.fromTo(
-            spans,
+            targets,
             { opacity: 0, filter: 'blur(12px)' },
             {
                 opacity: 1,
                 filter: 'blur(0px)',
                 duration: 0.9,
-                stagger: { each: 0.18, from: 'start' },
+                stagger: { each: 0.12, from: 'start' },
                 ease: 'power2.out',
                 clearProps: 'filter',
             },
@@ -53,20 +62,12 @@ export function createCloudCanvas(): CloudCanvas {
         const counts = getCounts()
         empty.style.display = counts.size === 0 ? 'flex' : 'none'
 
-        const spans = stage.querySelectorAll<HTMLSpanElement>('span')
-        if (spans.length) {
-            // Gentle fade-out of the current cloud before it re-forms.
-            gsap.to(spans, {
-                opacity: 0,
-                filter: 'blur(10px)',
-                duration: 0.5,
-                stagger: { each: 0.02, from: 'edges' },
-                ease: 'power1.in',
-                onComplete: render,
-            })
-        } else {
-            render()
-        }
+        firstRender = prev.size === 0
+        newWords = new Set(
+            [...counts.keys()].filter((w) => !prev.has(w)).map((w) => w.toLowerCase()),
+        )
+        prev = new Map(counts)
+        render()
     }
 
     return { element: wrap, draw }

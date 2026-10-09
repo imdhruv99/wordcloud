@@ -1,0 +1,14 @@
+{
+    "name": "wordcloud-server",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "express": "^5.1.0",
+        "pg": "^8.13.1"
+    }
+}

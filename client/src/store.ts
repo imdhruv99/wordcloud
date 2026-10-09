@@ -56,12 +56,20 @@ function toMap(obj: Record<string, number>): Map<string, number> {
     return new Map(Object.entries(obj))
 }
 
+function sameCounts(a: Map<string, number>, b: Map<string, number>): boolean {
+    if (a.size !== b.size) return false
+    for (const [word, n] of a) if (b.get(word) !== n) return false
+    return true
+}
+
 /** Pull the latest shared counts from the server. */
 export async function refresh(): Promise<void> {
     try {
         const res = await fetch('/api/words')
         if (!res.ok) return
-        counts = toMap(await res.json())
+        const next = toMap(await res.json())
+        if (sameCounts(counts, next)) return // nothing changed: don't re-render
+        counts = next
         emit()
     } catch {
         // Offline or server error: keep whatever we already have.
@@ -87,8 +95,11 @@ export async function addWord(input: string): Promise<boolean> {
             body: JSON.stringify({ word }),
         })
         if (res.ok) {
-            counts = toMap(await res.json())
-            emit()
+            const next = toMap(await res.json())
+            if (!sameCounts(counts, next)) {
+                counts = next
+                emit()
+            }
         }
     } catch {
         // Keep the optimistic value; next refresh will reconcile.

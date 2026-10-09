@@ -107,7 +107,7 @@ body {
 }
 
 #cloud span {
-  opacity: 0;
+  opacity: 1;
   cursor: default;
   will-change: opacity, filter;
   transition: text-shadow 0.35s ease;
